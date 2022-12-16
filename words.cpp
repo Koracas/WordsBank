@@ -1,55 +1,35 @@
 #include <iostream>
-#include <fstream>
 #include <vector>
 #include <string>
-#include <sstream>
 #include <list>
+#include <chrono>
+#include <thread>
+#include "QouteBank.cpp"
+#include "UDPBroadcastSockets.cpp"
 
 using namespace std;
 
-class QouteBank{
-    private:
-        list<vector<string>> dictionary;
-
-    public:
-        QouteBank(){
-            cout << "Generating QouteBank"<<endl;
-        }
-        void indexSource( string fileName ){
-            
-        }
-};
+const bool GLOBAL_DEBUG = false;
+const std::string broadcastIP_str = "192.168.1.44";
+const unsigned short broadcastPort = 50000;
 
 int main()
 {
-    std::cout << "Hello Parsing my students data (words.xml)....." << endl;
-    fstream newfile;
-    newfile.open("words.xml",ios::in); //open a file to perform read operation using file object
-    if (newfile.is_open()){   //checking whether the file is open
-        string curentString;
-        while(getline(newfile, curentString)){ //read data from file object and put it into string.
+    QouteBank qoutes = QouteBank();
+    qoutes.indexSource("words.xml");
 
-            cout << curentString << "\n"; //print the data of the string
+    int numberOfQoutes = qoutes.getNumberOfQoutes() -1;
+    int counter = 0;
 
-            // Vector of string to save tokens
-                vector <string> tokens;
-            
-                // stringstream class check1
-                stringstream check1(curentString);
-                
-                string intermediate;
-                
-                // Tokenizing w.r.t. space ' '
-                while(getline(check1, intermediate, ' '))
-                {
-                    tokens.push_back(intermediate);
-                }
-                
-                // Printing the token vector
-                for(int i = 0; i < tokens.size(); i++)
-                    cout << tokens[i] << '\n';
-                
-        }
-        newfile.close(); //close the file object.
+    UDPBroadcastSockets udpBroadcaster = UDPBroadcastSockets(broadcastIP_str, broadcastPort);
+
+    while (1)
+    {
+        Qoute curQoute = qoutes.getQouteAtIndex(counter);
+        udpBroadcaster.broadcastMessage(curQoute.print()+"\n");
+        int qouteLength = curQoute.length();
+        int waitTimeMS = qouteLength * 1000;
+        std::this_thread::sleep_for(std::chrono::milliseconds(waitTimeMS));
+        counter >= numberOfQoutes ? counter = 0 : counter++;
     }
-}
+ }
